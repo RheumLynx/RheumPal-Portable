@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Laboratorio Reumatológico</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #resultado {
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .warning {
+            color: orange;
+            margin-top: 10px;
+        }
+        .pcr-container {
+            display: flex;
+            align-items: center;
+        }
+        .pcr-container input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .pcr-container select {
+            width: auto;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Análisis de Laboratorio Reumatológico</h1>
+        <form id="labForm">
+            <label for="pcr">Proteína C Reactiva (PCR):</label>
+            <div class="pcr-container">
+                <input type="number" id="pcr" step="0.01" required>
+                <select id="pcrUnit">
+                    <option value="mg/L">mg/L</option>
+                    <option value="mg/dL">mg/dL</option>
+                </select>
+            </div>
+            
+            <label for="vsg">Velocidad de Sedimentación Globular (VSG) mm/h:</label>
+            <input type="number" id="vsg" required>
+            
+            <label for="factorReumatoide">Factor Reumatoide UI/mL:</label>
+            <input type="number" id="factorReumatoide" step="0.1" required>
+            
+            <label for="ana">Anticuerpos Antinucleares (ANA):</label>
+            <select id="ana" required>
+                <option value="">Seleccione un valor</option>
+                <option value="Negativo">Negativo</option>
+                <option value="40">1:40</option>
+                <option value="80">1:80</option>
+                <option value="160">1:160</option>
+                <option value="320">1:320</option>
+                <option value="640">1:640</option>
+                <option value="1280">1:1280</option>
+            </select>
+            
+            <label for="patronANA" id="patronANALabel" class="hidden">Patrón ANA:</label>
+            <select id="patronANA" class="hidden">
+                <option value="">Seleccione un patrón</option>
+                <option value="AC-1">AC-1 Nuclear homogéneo</option>
+                <option value="AC-2">AC-2 Nuclear punteado fino denso</option>
+                <option value="AC-3">AC-3 Centrómero</option>
+                <option value="AC-4">AC-4 Nuclear granular fino</option>
+                <option value="AC-5">AC-5 Nuclear granular grueso</option>
+                <option value="AC-6">AC-6 Gránulos nucleares múltiples</option>
+                <option value="AC-7">AC-7 Gránulos nucleares escasos</option>
+                <option value="AC-8">AC-8 Nucleolar homogéneo</option>
+                <option value="AC-9">AC-9 Nucleolar grumoso</option>
+                <option value="AC-10">AC-10 Nucleolar granular</option>
+                <option value="AC-11">AC-11 Membrana nuclear lisa</option>
+                <option value="AC-12">AC-12 Membrana nuclear granular</option>
+                <option value="AC-13">AC-13 Parecido a PCNA</option>
+                <option value="AC-14">AC-14 Parecido a CENP-F</option>
+                <option value="AC-15">AC-15 Citoplasmático fibrilar linear</option>
+                <option value="AC-16">AC-16 Citoplasmático fibrilar filamentar</option>
+                <option value="AC-17">AC-17 Citoplasmático fibrilar segmentado</option>
+                <option value="AC-18">AC-18 Citoplasmático granular discreto</option>
+                <option value="AC-19">AC-19 Citoplasmático granular fino denso</option>
+                <option value="AC-20">AC-20 Citoplasmático granular fino</option>
+                <option value="AC-21">AC-21 Citoplasmático reticular</option>
+                <option value="AC-22">AC-22 Citoplasmático granular polar</option>
+                <option value="AC-23">AC-23 Bastones y anillos</option>
+                <option value="AC-24">AC-24 Centrosoma</option>
+                <option value="AC-25">AC-25 Huso mitótico</option>
+                <option value="AC-26">AC-26 Parecido a NuMA</option>
+                <option value="AC-27">AC-27 Puente intercelular</option>
+                <option value="AC-28">AC-28 Envoltura cromosómica mitótica</option>
+            </select>
+            
+            <button type="submit">Analizar</button>
+        </form>
+        <div id="error" class="error"></div>
+        <div id="warning" class="warning"></div>
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('labForm');
+        const errorDiv = document.getElementById('error');
+        const warningDiv = document.getElementById('warning');
+        const anaSelect = document.getElementById('ana');
+        const patronANASelect = document.getElementById('patronANA');
+        const patronANALabel = document.getElementById('patronANALabel');
+        
+        const patronesANA = {
+            "AC-1": {
+                antigenosAsociados: "DsDNA, nucleosoma, histonas",
+                enfermedadesAsociadas: "LES, lupus por fármacos, artritis idiopática juvenil"
+            },
+            "AC-2": {
+                antigenosAsociados: "DFS70/LEDGF",
+                enfermedadesAsociadas: "Raro en Sjogren (Sj), LES, y Esclerosis sistémica (ES)"
+            },
+            "AC-3": {
+                antigenosAsociados: "CENP-A/B",
+                enfermedadesAsociadas: "CBP, ES cutánea limitada"
+            },
+            "AC-4": {
+                antigenosAsociados: "Ro, La, Mi2, TIF1gamma, TIF1beta, Ku",
+                enfermedadesAsociadas: "Sj, LES, dermatomiositis"
+            },
+            "AC-5": {
+                antigenosAsociados: "hnRNP, U1RNP, Sm, ARN polimerasa III",
+                enfermedadesAsociadas: "EMTC, LES, ES"
+            },
+            "AC-6": {
+                antigenosAsociados: "Sp-100, proteínas PML, MJ/NXP-2",
+                enfermedadesAsociadas: "CBP, EAS, dermatomiositis"
+            },
+            "AC-7": {
+                antigenosAsociados: "P80-coilina, SMN",
+                enfermedadesAsociadas: "SSj, LES, ES, PM, individuos asintomáticos"
+            },
+            "AC-8": {
+                antigenosAsociados: "PM/Scl-75, PM/Scl-100, Th/To, B23/nucleofosmina, nucleolina, No55/SC65",
+                enfermedadesAsociadas: "ES, ES/PM overlap"
+            },
+            "AC-9": {
+                antigenosAsociados: "U3snoRNP/fibrilarina",
+                enfermedadesAsociadas: "ES"
+            },
+            "AC-10": {
+                antigenosAsociados: "ARN polimerasa I, hUBF/NOR-90",
+                enfermedadesAsociadas: "ES, SSj"
+            },
+            "AC-11": {
+                antigenosAsociados: "Láminas A,B,C, o proteínas asociadas con las láminas",
+                enfermedadesAsociadas: "LES, SSj, artritis seronegativa"
+            },
+            "AC-12": {
+                antigenosAsociados: "Complejo de proteínas de los poros nucleares. Ej. gp210",
+                enfermedadesAsociadas: "CBP"
+            },
+            "AC-13": {
+                antigenosAsociados: "Antígeno nuclear de células proliferativas",
+                enfermedadesAsociadas: "LES, otras enfermedades"
+            },
+            "AC-14": {
+                antigenosAsociados: "Proteína del centrómero F (CENP-F)",
+                enfermedadesAsociadas: "Cáncer, otras enfermedades"
+            },
+            "AC-15": {
+                antigenosAsociados: "Actina, miosina no muscular",
+                enfermedadesAsociadas: "EMTC, hepatitis crónica activa, miastenia gravis, enfermedad de Crohn, CBP, hemodiálisis de largo plazo, raro en EAS"
+            },
+            "AC-16": {
+                antigenosAsociados: "Vimentina, citoqueratina, tropomiosina",
+                enfermedadesAsociadas: "Enfermedades infecciosas o inflamatorias, hemodiálisis de largo plazo, enfermedad hepática por alcohol, EAS, Psoriasis y sujetos sanos"
+            },
+            "AC-17": {
+                antigenosAsociados: "Actina alfa, vinculina",
+                enfermedadesAsociadas: "Miastenia gravis, enfermedad de Crohn, colitis ulcerosa"
+            },
+            "AC-18": {
+                antigenosAsociados: "GW182, Su/Ago2",
+                enfermedadesAsociadas: "CBP, EAS, enfermedades neurológicas y autoinmunes"
+            },
+            "AC-19": {
+                antigenosAsociados: "PL-7, PL-12, Proteína P ribosomal",
+                enfermedadesAsociadas: "Síndrome antisintetasa, PM/DM, LES, LES juvenil LES neuropsiquiátrico"
+            },
+            "AC-20": {
+                antigenosAsociados: "Jo-1/ sintetasa del Histidil del ARNt",
+                enfermedadesAsociadas: "Síndrome antisintetasa, PM/DM, ES limitada, derrame pleural idiopático"
+            },
+            "AC-21": {
+                antigenosAsociados: "PDC-E2/M2, BCOADC-E2, OGDC-E2, subunidad E1alfa de PDC, E3BP/proteína X",
+                enfermedadesAsociadas: "Común en CBP, ES generalizada, raro en otras EAS"
+            },
+            "AC-22": {
+                antigenosAsociados: "Giantina/macrogolgina, golgin-95/GM130, Golgina-160, golgina-97, golgina 245",
+                enfermedadesAsociadas: "Raro en SSj, LES, AR, EMTC, PAG, Ataxia cerebelar idiopática, degeneración cerebelar paraneoplásica, infecciones virales"
+            },
+            "AC-23": {
+                antigenosAsociados: "IMPDH2",
+                enfermedadesAsociadas: "Algunos pacientes infectados por VHC tras tratamiento con IFN/ribavirina; raro en LES, Hashimoto y controles sanos"
+            },
+            "AC-24": {
+                antigenosAsociados: "Pericentrina, nineína, Cep250, Cep110",
+                enfermedadesAsociadas: "Raro en ES, fenómeno de Raynaud, infecciones (virales y por micoplasmas)"
+            },
+            "AC-25": {
+                antigenosAsociados: "HsEg5",
+                enfermedadesAsociadas: "Raro en SSj, LES, otras conectivopatías"
+            },
+            "AC-26": {
+                antigenosAsociados: "NuMA",
+                enfermedadesAsociadas: "SSj, LES, otros"
+            },
+            "AC-27": {
+                antigenosAsociados: "-",
+                enfermedadesAsociadas: "Raro en ES, fenómeno de Raynaud, tumores malignos"
+            },
+            "AC-28": {
+                antigenosAsociados: "Histona H3 modificada, MCA-1",
+                enfermedadesAsociadas: "Raro en lúpus discoide (LED), leucemia linfocítica crónica (LLC), SSj y polimialgia reumática"
+            }
+        };
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const pcr = parseFloat(document.getElementById('pcr').value);
+            const pcrUnit = document.getElementById('pcrUnit').value;
+            const vsg = parseFloat(document.getElementById('vsg').value);
+            const factorReumatoide = parseFloat(document.getElementById('factorReumatoide').value);
+            const ana = anaSelect.value;
+            const patronANA = patronANASelect.value;
+            
+            // Verificar si todos los campos requeridos están llenos
+            if (isNaN(pcr) || isNaN(vsg) || isNaN(factorReumatoide) || !ana) {
+                errorDiv.innerText = "Por favor, complete todos los campos requeridos antes de analizar.";
+                document.getElementById('resultado').innerText = "";
+                return;
+            }
+            
+            // Si ANA es 1:160 o superior, se requiere el patrón ANA
+            if (parseInt(ana) >= 160 && !patronANA) {
+                errorDiv.innerText = "Por favor, seleccione un patrón ANA para resultados de ANA de 1:160 o superiores.";
+                document.getElementById('resultado').innerText = "";
+                return;
+            }
+            
+            errorDiv.innerText = ""; // Limpiar mensajes de error previos
+            warningDiv.innerText = ""; // Limpiar mensajes de advertencia previos
+            
+            let warnings = [];
+            
+            // Verificar valores fuera de rango
+            if (pcr < 0) warnings.push("El valor de PCR no puede ser negativo.");
+            if (vsg < 0) warnings.push("El valor de VSG no puede ser negativo.");
+            if (factorReumatoide < 0) warnings.push("El valor de Factor Reumatoide no puede ser negativo.");
+            
+            if (warnings.length > 0) {
+                warningDiv.innerText = "Advertencias:\n" + warnings.join("\n");
+            }
+            
+            let resultado = "Resultados del análisis:\n\n";
+            
+            // PCR
+            let pcrMgL = pcr;
+            if (pcrUnit === "mg/dL") {
+                pcrMgL = pcr * 10; // Convertir de mg/dL a mg/L
+            }
+            resultado += `PCR: ${pcr} ${pcrUnit} (${pcrMgL.toFixed(2)} mg/L) - `;
+            if (pcrMgL < 5) {
+                resultado += "Normal\n";
+            } else {
+                resultado += "Elevado (puede indicar inflamación)\n";
+            }
+            
+            // VSG
+            resultado += `VSG: ${vsg} mm/h - `;
+            if (vsg < 20) {
+                resultado += "Normal\n";
+            } else {
+                resultado += "Elevado (puede indicar inflamación o infección)\n";
+            }
+            
+            // Factor Reumatoide
+            resultado += `Factor Reumatoide: ${factorReumatoide} UI/mL - `;
+            if (factorReumatoide < 14) {
+                resultado += "Negativo\n";
+            } else {
+                resultado += "Positivo (puede estar asociado con artritis reumatoide)\n";
+            }
+            
+            // ANA
+            resultado += `ANA: ${ana} - `;
+            if (ana === "Negativo" || parseInt(ana) < 40) {
+                resultado += "Negativo\n";
+            } else {
+                resultado += `Positivo (título ${ana})\n`;
+                if (parseInt(ana) >= 160 && patronANA) {
+                    resultado += `Patrón ANA: ${patronANA}\n`;
+                    resultado += `Antígenos asociados: ${patronesANA[patronANA].antigenosAsociados}\n`;
+                    resultado += `Enfermedades asociadas: ${patronesANA[patronANA].enfermedadesAsociadas}\n`;
+                }
+            }
+            
+            // Conclusiones
+            resultado += "\nConclusiones:\n";
+            
+            if (pcrMgL >= 5 || vsg >= 20) {
+                resultado += "- Hay evidencia de inflamación sistémica.\n";
+            }
+            
+            if (factorReumatoide >= 14) {
+                resultado += "- El Factor Reumatoide positivo sugiere la posibilidad de artritis reumatoide u otra enfermedad autoinmune.\n";
+            }
+            
+            if (ana !== "Negativo" && parseInt(ana) >= 40) {
+                resultado += "- Los ANA positivos sugieren la posibilidad de una enfermedad autoinmune sistémica.\n";
+                
+                if (parseInt(ana) >= 160 && patronANA) {
+                    resultado += `- El patrón ANA ${patronANA} está asociado con los siguientes antígenos y enfermedades:\n`;
+                    resultado += `  Antígenos: ${patronesANA[patronANA].antigenosAsociados}\n`;
+                    resultado += `  Enfermedades: ${patronesANA[patronANA].enfermedadesAsociadas}\n`;
+                }
+            }
+            
+            if (pcrMgL < 5 && vsg < 20 && factorReumatoide < 14 && (ana === "Negativo" || parseInt(ana) < 40)) {
+                resultado += "- Los resultados están dentro de los rangos normales y no sugieren un proceso inflamatorio o autoinmune activo.\n";
+                resultado += "- Descartar derivación a Reumatología o Medicina interna, no signos de actividad inflamatoria o autoinmune.\n";
+            }
+            
+            resultado += "\nSe recomienda interpretar estos resultados en el contexto clínico del paciente y considerar pruebas adicionales o consulta con un reumatólogo si es necesario.";
+
+            resultado += "\n\nAbreviaturas:";
+            resultado += "\nLES: Lupus Eritematoso Sistémico";
+            resultado += "\nSj: Síndrome de Sjögren";
+            resultado += "\nES: Esclerosis Sistémica";
+            resultado += "\nCBP: Cirrosis Biliar Primaria";
+            resultado += "\nEMTC: Enfermedad Mixta del Tejido Conectivo";
+            resultado += "\nEAS: Enfermedad Autoinmune Sistémica";
+            resultado += "\nPM: Polimiositis";
+            resultado += "\nDM: Dermatomiositis";
+            resultado += "\nSSj: Síndrome de Sjögren";
+            resultado += "\nAR: Artritis Reumatoide";
+            resultado += "\nPAG: Patrón Anti-Golgi";
+            resultado += "\nVHC: Virus de la Hepatitis C";
+            resultado += "\nIFN: Interferón";
+            resultado += "\nLED: Lupus Eritematoso Discoide";
+            resultado += "\nLLC: Leucemia Linfocítica Crónica";
+            
+            document.getElementById('resultado').innerText = resultado;
+        });
+
+        anaSelect.addEventListener('change', function() {
+            if (parseInt(this.value) >= 160) {
+                patronANASelect.classList.remove('hidden');
+                patronANALabel.classList.remove('hidden');
+                patronANASelect.required = true;
+            } else {
+                patronANASelect.classList.add('hidden');
+                patronANALabel.classList.add('hidden');
+                patronANASelect.required = false;
+                patronANASelect.value = "";
+            }
+        });
+    </script>
+</body>
+</html>
